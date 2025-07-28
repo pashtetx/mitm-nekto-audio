@@ -1,5 +1,5 @@
 from typing import Dict, Any, Union, Callable, Awaitable
-from types import FunctionType, CoroutineType
+from inspect import iscoroutinefunction
 
 class Dispatcher:
 
@@ -12,6 +12,9 @@ class Dispatcher:
         if not callable(callback): raise ValueError("callback is not callable")
         self.actions[name].append(callback)
 
+    async def dispatch_connect(self) -> None:
+        await self.dispatch("connect", {})
+
     async def dispatch_socketio(self, payload: Dict[str, Any]) -> None:
         type = payload.get("type")
         await self.dispatch(type, payload)
@@ -20,8 +23,8 @@ class Dispatcher:
         actions = self.actions.get(name)
         if not actions: return
         for action in actions:
-            if isinstance(action, CoroutineType):
+            if iscoroutinefunction(action):
                 await action(**self.default, payload=payload)
-            elif isinstance(action, FunctionType):
+            else:
                 action(**self.default, payload=payload)
             

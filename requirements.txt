@@ -1,2 +1,2 @@
-python-socketio
+python-socketio==5.0.1
 aiortc
