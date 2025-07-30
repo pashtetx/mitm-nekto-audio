@@ -3,9 +3,11 @@ import asyncio
 
 class MediaRedirect:
 
-    def __init__(self, track: PlayerStreamTrack) -> None:
-        self.track = track
+    def __init__(self) -> None:
         self.__audio = PlayerStreamTrack(self, kind="audio")
+
+    def add_track(self, track: PlayerStreamTrack) -> None:
+        self.track = track
 
     @property
     def audio(self) -> PlayerStreamTrack:
