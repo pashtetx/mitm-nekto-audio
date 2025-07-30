@@ -1,5 +1,5 @@
 from aiortc.contrib.media import PlayerStreamTrack
-
+import asyncio
 
 class MediaRedirect:
 
@@ -12,7 +12,7 @@ class MediaRedirect:
         return self.__audio
 
     async def start(self) -> None:
-        await self.__run_track(self.track)
+        asyncio.ensure_future(self.__run_track(self.track))
 
     async def __run_track(self, track: PlayerStreamTrack) -> None:
         while True:
