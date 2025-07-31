@@ -26,10 +26,18 @@ class Room:
 
     async def send_ice_candidates(self, pc: RTCPeerConnection, transport: Transport) -> None:
         async for candidate in get_ice_candidates(pc):
-            candidate_string = object_to_string(candidate)
+            candidate_string = json.loads(object_to_string(candidate)).get("candidate")
             payload = {
                 "type":"ice-candidate",
-                "candidate":json.dumps({"candidate":candidate_string}),
+                "candidate":json.dumps(
+                    {
+                        "candidate":{
+                            "candidate":candidate_string,
+                            "sdpMid":0, 
+                            "sdpMLineIndex":0
+                        }, 
+                    }
+                ),
                 "connectionId":self.connections[transport],
             }
             await transport.emit("event", data=payload)
@@ -38,9 +46,10 @@ class Room:
         connection_id = payload.get("connectionId")
         initiator = payload.get("initiator")
         turn_params = list(filter(
-            lambda item: not item["url"].startswith("turn["),
+            lambda item: not item["url"].startswith("turn:["),
             json.loads(payload.get("turnParams"))
         ))
+        print(turn_params)
         pc = RTCPeerConnection(configuration=RTCConfiguration(
             iceServers=[RTCIceServer(
                 urls=turn_param.get("url"),
@@ -53,6 +62,7 @@ class Room:
 
         @pc.on("connectionstatechange")
         async def on_connection_state_chnage() -> None:
+            print(pc.connectionState)
             if pc.connectionState == "failed":
                 await pc.close()
             if pc.connectionState == "connected":
@@ -65,7 +75,9 @@ class Room:
 
         @pc.on("track")
         async def on_track(track) -> None:
+            print(track, "received track")
             self.media_redirect[transport].add_track(track)
+            await self.media_redirect[transport].start()
             payload = {
                 "type":"stream-received",
                 "connectionId":self.connections[transport]
@@ -77,7 +89,7 @@ class Room:
             pc.addTrack(media_redirect.audio)
             self.media_redirect[transport] = media_redirect
             offer = await pc.createOffer()
-            pc.setLocalDescription(offer)
+            await pc.setLocalDescription(offer)
             payload = {
                 "type":"offer",
                 "offer":json.dumps({"sdp":offer.sdp, "type": offer.type}),
@@ -119,9 +131,12 @@ class Room:
 
     async def on_ice_candidate(self, transport: Transport, payload: Dict[str, Any]) -> None:
         pc = self.pcs.get(transport)
+        candidate_payload = json.loads(payload.get("candidate")).get("candidate")
         candidate = candidate_from_sdp(
-            json.loads(payload.get("candidate")).get("candidate").get("candidate")
+            candidate_payload.get("candidate")
         )
+        candidate.sdpMid = candidate_payload.get("sdpMid")
+        candidate.sdpMLineIndex = candidate_payload.get("sdpMLineIndex")
         await pc.addIceCandidate(candidate)
 
     async def on_close(self, transport: Transport, payload: Dict[str, Any]) -> None:

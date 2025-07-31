@@ -21,6 +21,7 @@ class MediaRedirect:
             try:
                 frame = await track.recv()
             except Exception as e:
+                return
                 print("EXCEPTION", e)
             await self.__audio._queue.put(frame)
 

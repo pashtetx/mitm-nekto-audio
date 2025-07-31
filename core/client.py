@@ -33,6 +33,29 @@ class Client:
         self.add_action(name="connect", callback=self.__on_connect)
         self.add_action(name="registered", callback=self.__on_auth)
 
+    async def search(self, params: Dict[str, Any] = {}) -> None:
+        payload = {
+            "type":"scan-for-peer",
+            "peerToPeer":True,
+	"searchCriteria": {
+		"peerSex": "FEMALE",
+		"group": 0,
+		"userAge": {
+			"from": 33,
+			"to": 100
+		},
+		"userSex": "FEMALE",
+		"peerAges": [
+			{
+				"from": 33,
+				"to": 100
+			}
+		]
+	},
+            "token":None,
+        }
+        await self.transport.emit("event", data=payload)
+
     async def __on_connect(self, transport: Transport, payload: Dict[str, Any]) -> None:
         payload = {
             "type":"register",
@@ -54,6 +77,7 @@ class Client:
             "data":webagent
         }
         await self.transport.emit("event", data=payload)
+        await self.search()
 
     async def connect(self) -> None:
         self.init_actions()
