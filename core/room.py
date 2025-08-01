@@ -21,7 +21,7 @@ class Room:
         client.add_action("peer-connect", self.on_peer)
         client.add_action("answer", self.on_answer)
         client.add_action("ice-candidate", self.on_ice_candidate)
-        client.add_action("peer-disconnected", self.on_close)
+        client.add_action("peer-disconnect", self.on_close)
         self.members.append(client.transport)
 
     async def send_ice_candidates(self, pc: RTCPeerConnection, transport: Transport) -> None:
@@ -49,7 +49,6 @@ class Room:
             lambda item: not item["url"].startswith("turn:["),
             json.loads(payload.get("turnParams"))
         ))
-        print(turn_params)
         pc = RTCPeerConnection(configuration=RTCConfiguration(
             iceServers=[RTCIceServer(
                 urls=turn_param.get("url"),
@@ -69,7 +68,7 @@ class Room:
                 payload = {
                     "type":"peer-connection",
                     "connectionId":connection_id,
-                    "connected":True,
+                    "connection":True,
                 }
                 await transport.emit("event", data=payload)
 
@@ -84,12 +83,19 @@ class Room:
             }
             await transport.emit("event", data=payload)
 
+        print(initiator)
         if initiator:
             media_redirect = MediaRedirect()
             pc.addTrack(media_redirect.audio)
             self.media_redirect[transport] = media_redirect
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
+            payload = {
+                "type":"peer-mute",
+                "connectionId":self.connections[transport],
+                "muted":False
+            }
+            await transport.emit("event", data=payload)
             payload = {
                 "type":"offer",
                 "offer":json.dumps({"sdp":offer.sdp, "type": offer.type}),
@@ -140,5 +146,6 @@ class Room:
         await pc.addIceCandidate(candidate)
 
     async def on_close(self, transport: Transport, payload: Dict[str, Any]) -> None:
+        print("CLOSE")
         pc = self.pcs.get(transport)
         await pc.close()
