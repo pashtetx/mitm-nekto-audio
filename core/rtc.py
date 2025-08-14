@@ -1,9 +1,10 @@
 from aiortc.mediastreams import AudioStreamTrack
+from aiortc.contrib.media import MediaRecorder
 from av import AudioFrame
+import av
 import asyncio
 
 class AudioRedirect(AudioStreamTrack):
-
     def __init__(self) -> None:
         self._queue = asyncio.Queue()
         super().__init__()
@@ -13,9 +14,12 @@ class AudioRedirect(AudioStreamTrack):
         return frame
 
 class MediaRedirect:
-
-    def __init__(self) -> None:
+    def __init__(self, file: str) -> None:
         self.__audio = AudioRedirect()
+        self.container = av.open(
+            file=file, mode="w",
+        )
+        self.stream = self.container.add_stream(codec_name="mp3")
 
     def add_track(self, track: AudioRedirect) -> None:
         self.track = track
@@ -32,8 +36,10 @@ class MediaRedirect:
             try:
                 frame = await track.recv()
             except Exception as e:
-                return
                 print("EXCEPTION", e)
+                return
+            for packet in self.stream.encode(frame):
+                self.container.mux(packet)
             await self.__audio._queue.put(frame)
-
+            
     

@@ -14,13 +14,18 @@ class Client:
         user_id: str,
         ua: str,
         locale: str = "en",
-        time_zone: str = "Europe/Kiew"
+        time_zone: str = "Europe/Kiew",
+        search_criteria: Dict[str, Any] = {
+            "peerSex": "ANY",
+            "group": 0,
+            "userSex": "ANY"
+        },
     ) -> None:
         self.user_id = user_id
         self.ua = ua
         self.locale = locale
         self.time_zone = time_zone
-
+        self.search_criteria = search_criteria
         self.is_firefox = "Gecko" in self.ua
 
         self.transport = Transport()
@@ -37,22 +42,8 @@ class Client:
         payload = {
             "type":"scan-for-peer",
             "peerToPeer":True,
-	"searchCriteria": {
-		"peerSex": "FEMALE",
-		"group": 0,
-		"userAge": {
-			"from": 33,
-			"to": 100
-		},
-		"userSex": "FEMALE",
-		"peerAges": [
-			{
-				"from": 33,
-				"to": 100
-			}
-		]
-	},
             "token":None,
+            "searchCriteria":self.search_criteria
         }
         await self.transport.emit("event", data=payload)
 
@@ -78,6 +69,15 @@ class Client:
         }
         await self.transport.emit("event", data=payload)
         await self.search()
+
+    async def peer_disconnect(self, connection_id: str) -> None:
+        print("connection_id:", connection_id)
+        await self.transport.emit(
+            "event", data={
+                "type":"peer-disconnect",
+                "connectionId":connection_id
+            }
+        )
 
     async def connect(self) -> None:
         self.init_actions()

@@ -6,23 +6,29 @@ from utils import get_ice_candidates
 from aiortc import RTCPeerConnection, RTCConfiguration, RTCIceServer, RTCSessionDescription
 
 from aiortc.contrib.signaling import object_to_string, candidate_from_sdp
-
+import uuid
+import datetime
 import json
 
 class Room:
     def __init__(self) -> None:
-        self.members = list()
+        self.clients = list()
         self.pcs = dict()
         self.connections = dict()
         self.media_redirect = dict()
     
+    @staticmethod
+    def get_str_now() -> None:
+        return datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+
     def add_member(self, client: Client) -> None:
         client.add_action("offer", self.on_offer)
         client.add_action("peer-connect", self.on_peer)
         client.add_action("answer", self.on_answer)
         client.add_action("ice-candidate", self.on_ice_candidate)
         client.add_action("peer-disconnect", self.on_close)
-        self.members.append(client.transport)
+        self.clients.append(client)
+        self.media_redirect[client.transport] = MediaRedirect(file=f"{client.user_id}.mp3")
 
     async def send_ice_candidates(self, pc: RTCPeerConnection, transport: Transport) -> None:
         async for candidate in get_ice_candidates(pc):
@@ -74,20 +80,21 @@ class Room:
 
         @pc.on("track")
         async def on_track(track) -> None:
-            print(track, "received track")
-            self.media_redirect[transport].add_track(track)
-            await self.media_redirect[transport].start()
+            print(self.media_redirect)
+            for transport_key, media_redirect in self.media_redirect.items():
+                print(transport_key != transport)
+                if transport_key != transport:
+                    self.media_redirect[transport_key].add_track(track)
+                    await self.media_redirect[transport_key].start()
             payload = {
                 "type":"stream-received",
                 "connectionId":self.connections[transport]
             }
             await transport.emit("event", data=payload)
 
-        print(initiator)
         if initiator:
-            media_redirect = MediaRedirect()
+            media_redirect = self.media_redirect[transport]
             pc.addTrack(media_redirect.audio)
-            self.media_redirect[transport] = media_redirect
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
             payload = {
@@ -112,9 +119,8 @@ class Room:
         )
         await pc.setRemoteDescription(remote_description)
 
-        media_redirect = MediaRedirect()
+        media_redirect = self.media_redirect[transport]
         pc.addTrack(media_redirect.audio)
-        self.media_redirect[transport] = media_redirect
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
         payload = {
@@ -149,3 +155,9 @@ class Room:
         print("CLOSE")
         pc = self.pcs.get(transport)
         await pc.close()
+        for client in self.clients:
+            if client.transport != transport:
+                if self.connections.get(client.transport):
+                    await client.peer_disconnect(self.connections[client.transport])
+            # self.media_redirect[client.transport] = MediaRedirect(file=f"{client.user_id}.mp3")
+            # await client.search()
