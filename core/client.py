@@ -2,10 +2,10 @@ from .dispatcter import Dispatcher
 from .transport import Transport
 
 from typing import Callable, Awaitable, Union, Dict, Any
-
 from functools import partial
-
 from utils import alarm
+
+from log import log
 
 class Client:
 
@@ -28,6 +28,8 @@ class Client:
         self.search_criteria = search_criteria
         self.is_firefox = "Gecko" in self.ua
 
+        self.client_logger = log.bind(user_id=user_id[:7])
+
         self.transport = Transport()
         self.dispatcher = Dispatcher(default={"transport":self.transport})
 
@@ -39,6 +41,9 @@ class Client:
         self.add_action(name="registered", callback=self.__on_auth)
 
     async def search(self, params: Dict[str, Any] = {}) -> None:
+        self.client_logger.info(
+            "User is searching for a voice partner.", criteria=self.search_criteria
+        )
         payload = {
             "type":"scan-for-peer",
             "peerToPeer":True,
@@ -59,6 +64,7 @@ class Client:
         if self.is_firefox:
             payload.update({"firefox":self.is_firefox})
         await transport.emit("event", data=payload)
+        self.client_logger.info("User sent register payload.")
 
     async def __on_auth(self, transport: Transport, payload: Dict[str, Any]) -> None:
         internal_id = payload.get("internal_id")
@@ -68,10 +74,11 @@ class Client:
             "data":webagent
         }
         await self.transport.emit("event", data=payload)
+        self.client_logger.info("User sent web-agent payload.", payload=payload)
         await self.search()
 
     async def peer_disconnect(self, connection_id: str) -> None:
-        print("connection_id:", connection_id)
+        self.client_logger.info("User disconnect a peer", payload=payload)
         await self.transport.emit(
             "event", data={
                 "type":"peer-disconnect",

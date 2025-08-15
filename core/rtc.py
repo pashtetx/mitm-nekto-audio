@@ -36,7 +36,6 @@ class MediaRedirect:
             try:
                 frame = await track.recv()
             except Exception as e:
-                print("EXCEPTION", e)
                 return
             for packet in self.stream.encode(frame):
                 self.container.mux(packet)

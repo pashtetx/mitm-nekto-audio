@@ -20,7 +20,6 @@ class Dispatcher:
         await self.dispatch(type, payload)
 
     async def dispatch(self, name: str, payload: Dict[str, Any]) -> None:
-        print(payload)
         actions = self.actions.get(name)
         if not actions: return
         for action in actions:
