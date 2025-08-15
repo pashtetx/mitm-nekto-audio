@@ -27,7 +27,7 @@ git clone https://github.com/pashtetx/nekto.me-spion.git
 console.log(JSON.parse(localStorage.getItem("storage_audio_v2")).user.authToken)
 ```
 
-Отримавши токен — вставте його у `config.ini` для першого клієнта. Те саме зробіть у **вікні інкогніто** для другого клієнта. Також вам потрібен user-agent від свого браузера для симуляції звийчайного користувача.
+Отримавши токен - вставте його у `config.ini` для першого клієнта. Те саме зробіть у **вікні інкогніто** для другого клієнта. Також вам потрібен user-agent від свого браузера для симуляції звийчайного користувача.
 
 > ⚠️ Обов’язково: пройдіть усі **3 капчі**.
 
@@ -47,11 +47,11 @@ console.log(JSON.parse(localStorage.getItem("storage_audio_v2")).user.authToken)
 | search-age | Вік співрозмовника   | 0,17 або 0,17-18,24 |
 
 > Підказка:
-> **FEMALE** — жіноча стать
-> **MALE** — чоловіча стать
+> **FEMALE** - жіноча стать
+> **MALE** - чоловіча стать
 
 ---
 
 ## Питання
 
-Якщо у вас є питання — пишіть у Telegram: [клік](https://t.me/+ESHNRLki3qlkODQy)
+Якщо у вас є питання - пишіть у Telegram: [клік](https://t.me/+ESHNRLki3qlkODQy)
