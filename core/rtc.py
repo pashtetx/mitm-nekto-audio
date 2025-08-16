@@ -20,6 +20,7 @@ class MediaRedirect:
             file=file, mode="w",
         )
         self.stream = self.container.add_stream(codec_name="mp3")
+        self.track = None
 
     def add_track(self, track: AudioRedirect) -> None:
         self.track = track

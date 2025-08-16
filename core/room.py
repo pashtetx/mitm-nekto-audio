@@ -26,6 +26,7 @@ class Room:
             os.mkdir("dialogs")
 
     def add_member(self, client: Client) -> None:
+        self.clients.append(client)
         client.add_action("offer", self.on_offer)
         client.add_action("peer-connect", self.on_peer)
         client.add_action("answer", self.on_answer)
@@ -101,7 +102,9 @@ class Room:
             for transport_key, media_redirect in self.media_redirect.items():
                 if transport_key != transport:
                     self.media_redirect[transport_key].add_track(track)
-                    await self.media_redirect[transport_key].start()
+            if all([redirect.track for _, redirect in self.media_redirect.items()]):
+                for _, redirect in self.media_redirect.items():
+                    await redirect.start()
             log.info("User received a track.")
             payload = {
                 "type":"stream-received",
@@ -181,10 +184,7 @@ class Room:
         pc = self.pcs.get(transport)
         await pc.close()
         for client in self.clients:
-            await self.pcs[client.transport].close()
             if client.transport != transport:
                 if self.connections.get(client.transport):
                     await client.peer_disconnect(self.connections[client.transport])
-            # self.media_redirect[client.transport] = MediaRedirect(file=f"{client.user_id}.mp3")
-            # await client.search()
             

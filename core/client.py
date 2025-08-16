@@ -78,7 +78,7 @@ class Client:
         await self.search()
 
     async def peer_disconnect(self, connection_id: str) -> None:
-        self.client_logger.info("User disconnect a peer", payload=payload)
+        self.client_logger.info("User disconnect a peer", connection_id=connection_id)
         await self.transport.emit(
             "event", data={
                 "type":"peer-disconnect",
