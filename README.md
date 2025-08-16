@@ -1,6 +1,6 @@
-### MITM nekto.me в аудіочаті
+### MITM nekto.me in audiochat
 
-на основі **WebRTC** та **Socket.IO**
+based **WebRTC** and **Socket.IO**
 
 [🇺🇦 Українська](./README.md), [🇷🇺 Русский](./README_ru.md)
 

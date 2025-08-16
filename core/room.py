@@ -181,8 +181,10 @@ class Room:
         pc = self.pcs.get(transport)
         await pc.close()
         for client in self.clients:
+            await self.pcs[client.transport].close()
             if client.transport != transport:
                 if self.connections.get(client.transport):
                     await client.peer_disconnect(self.connections[client.transport])
             # self.media_redirect[client.transport] = MediaRedirect(file=f"{client.user_id}.mp3")
             # await client.search()
+            
