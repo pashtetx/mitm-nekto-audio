@@ -28,7 +28,7 @@ async def start(ctx: discord.ApplicationContext):
         sink.add_queue(stream.get_queue())
         room.add_member(client, bot, stream)
         if not client.transport.connected:
-            await client.connect()
+            await client.connect(wait=False)
         else:
             await client.search()
     voice.start_recording(
