@@ -1,31 +1,57 @@
 from .client import Client
 from typing import Dict, Any
 from .transport import Transport
-from .rtc import MediaRedirect
+from .rtc import MediaRedirect, RedirectDiscord
 from utils import get_ice_candidates
 from aiortc import RTCPeerConnection, RTCConfiguration, RTCIceServer, RTCSessionDescription
 
 from aiortc.contrib.signaling import object_to_string, candidate_from_sdp
 from pathlib import Path
 
+from discord.voice_client import VoiceClient
+from discord import Bot
+
+from core.disc.sink import RedirectFromDiscordStream
+
 import os
 import json
 
 class Room:
+
+    @staticmethod
+    def clear_client(client: Client) -> None:
+        client.remove_action("offer")
+        client.remove_action("peer-connect")
+        client.remove_action("answer")
+        client.remove_action("ice-candidate")
+        client.remove_action("peer-disconnect")
+
     def __init__(self) -> None:
         self.clients = list()
         self.pcs = dict()
         self.connections = dict()
         self.media_redirect = dict()
         self.loggers = dict()
+        self.bots = dict()
+        self.discord_redirect = None
         self.create_dialogs_dir()
+
+    def set_discord_redirect(self, vc: VoiceClient) -> None:
+        self.discord_redirect = RedirectDiscord(vc)
+
+    def clear(self) -> None:
+        self.pcs.clear()
+        self.connections.clear()
+        self.media_redirect.clear()
+        self.bots.clear()
+        self.clients.clear()
 
     @staticmethod
     def create_dialogs_dir() -> None:
         if not os.path.exists(Path("dialogs")):
             os.mkdir("dialogs")
 
-    def add_member(self, client: Client) -> None:
+    def add_member(self, client: Client, bot: Bot = None, stream: RedirectFromDiscordStream = None) -> None:
         self.clients.append(client)
         client.add_action("offer", self.on_offer)
         client.add_action("peer-connect", self.on_peer)
@@ -34,8 +60,11 @@ class Room:
         client.add_action("peer-disconnect", self.on_close)
         self.loggers[client.transport] = client.client_logger
         self.media_redirect[client.transport] = MediaRedirect(
-            file="dialogs" / Path(f"{client.user_id}.mp3")
+            file="dialogs" / Path(f"{client.user_id}.mp3"),
+            redirect_to_discord=self.discord_redirect,
+            redirect_from_discord=stream,
         )
+        self.bots[client.transport] = bot
 
     async def send_ice_candidates(self, pc: RTCPeerConnection, transport: Transport) -> None:
         log = self.get_client_logger(transport)
@@ -80,7 +109,6 @@ class Room:
         ))
         self.pcs[transport] = pc
         self.connections[transport] = connection_id
-
         @pc.on("connectionstatechange")
         async def on_connection_state_change() -> None:
             if pc.connectionState == "connecting":
@@ -187,4 +215,14 @@ class Room:
             if client.transport != transport:
                 if self.connections.get(client.transport):
                     await client.peer_disconnect(self.connections[client.transport])
+            else:
+                self.clear_client(client)
+        media_redirect = self.media_redirect.get(transport)
+        if media_redirect:
+            voice = media_redirect.redirect_to_discord.vc
+            if voice.is_connected():
+                await voice.disconnect(force=True) 
+        if all([pc.connectionState == "closed" for _, pc in self.pcs.items()]):
+            log.info("Clear room.")
+            self.clear()
             

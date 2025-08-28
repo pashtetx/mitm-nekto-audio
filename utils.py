@@ -1,6 +1,7 @@
 import hashlib
 import base64
-
+import av
+import numpy as np
 from aiortc import RTCPeerConnection
 
 def alarm(user_id: str, internal_id: int) -> str:
@@ -15,3 +16,14 @@ async def get_ice_candidates(pc: RTCPeerConnection) -> None:
         iceGatherer = transceiver.sender.transport.transport.iceGatherer
         for candidate in iceGatherer.getLocalCandidates():
             yield candidate
+
+def mix_audio_frames(frame1: av.AudioFrame, frame2: av.AudioFrame) -> av.AudioFrame:
+    audio = frame1.to_ndarray()
+    audio2 = frame2.to_ndarray()
+    mixed = audio + audio2
+    frame = av.AudioFrame.from_ndarray(mixed, format=frame1.format, layout=frame1.layout)
+    frame.pts = max(frame1.pts, frame2.pts)
+    frame.sample_rate = frame1.sample_rate
+    frame.time_base = frame1.time_base
+    return frame
+

@@ -12,6 +12,9 @@ class Dispatcher:
         if not callable(callback): raise ValueError("callback is not callable")
         self.actions[name].append(callback)
 
+    def remove_action(self, name: str) -> None:
+        self.actions[name].clear()
+
     async def dispatch_connect(self) -> None:
         await self.dispatch("connect", {})
 

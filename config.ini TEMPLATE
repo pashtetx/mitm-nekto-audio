@@ -1,5 +1,7 @@
 [settings]
-clients = female-client, male-client
+clients=female-client,male-client
+; Optional
+discord-token={your discord token} 
 
 [client/female-client]
 user_id={your user_id}
@@ -7,7 +9,7 @@ ua={your ua}
 sex=FEMALE
 search-sex=MALE
 age=0,17
-search-age=0,17-18,24
+search-age=0,17
 
 [client/male-client]
 user_id={your user_id}
@@ -15,4 +17,4 @@ ua={your ua}
 sex=MALE
 search-sex=FEMALE
 age=0,17
-search-age=0,17-18,24
+search-age=0,17

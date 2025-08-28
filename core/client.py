@@ -2,7 +2,6 @@ from .dispatcter import Dispatcher
 from .transport import Transport
 
 from typing import Callable, Awaitable, Union, Dict, Any
-from functools import partial
 from utils import alarm
 
 from log import log
@@ -14,7 +13,7 @@ class Client:
         user_id: str,
         ua: str,
         locale: str = "en",
-        time_zone: str = "Europe/Kiew",
+        time_zone: str = "Europe/Kiev",
         search_criteria: Dict[str, Any] = {
             "peerSex": "ANY",
             "group": 0,
@@ -36,11 +35,14 @@ class Client:
     def add_action(self, name: str, callback: Union[Callable, Awaitable]) -> None:
         self.dispatcher.add_action(name, callback)
 
+    def remove_action(self, name: str) -> None:
+        self.dispatcher.remove_action(name)
+
     def init_actions(self) -> None:
         self.add_action(name="connect", callback=self.__on_connect)
         self.add_action(name="registered", callback=self.__on_auth)
 
-    async def search(self, params: Dict[str, Any] = {}) -> None:
+    async def search(self) -> None:
         self.client_logger.info(
             "User is searching for a voice partner.", criteria=self.search_criteria
         )
@@ -86,8 +88,8 @@ class Client:
             }
         )
 
-    async def connect(self) -> None:
+    async def connect(self, wait: bool = True) -> None:
         self.init_actions()
         self.transport.on("connect", self.dispatcher.dispatch_connect)
         self.transport.on("event", self.dispatcher.dispatch_socketio)
-        await self.transport.connect(ua=self.ua)
+        await self.transport.connect(ua=self.ua, wait=wait)

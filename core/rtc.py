@@ -1,8 +1,32 @@
 from aiortc.mediastreams import AudioStreamTrack
-from aiortc.contrib.media import MediaRecorder
 from av import AudioFrame
+
+from core.disc.sink import RedirectFromDiscordStream
+
+from discord import VoiceClient
+
+from utils import mix_audio_frames
+
 import av
 import asyncio
+
+class RedirectDiscord:
+    def __init__(self, vc: VoiceClient) -> None:
+        self._queues = dict()
+        self.vc = vc
+
+    async def recv(self) -> None:
+        if len(self._queues) < 2:
+            return
+        if all([queue.qsize() > 1 for _, queue in self._queues.items()]):
+            frames = []
+            for _, queue in self._queues.items():
+                frame = await queue.get()     
+                frames.append(frame)               
+            mixed = mix_audio_frames(*frames)
+            for plane in mixed.planes:
+                packet = bytes(plane)
+            self.vc.send_audio_packet(packet)
 
 class AudioRedirect(AudioStreamTrack):
     def __init__(self) -> None:
@@ -14,11 +38,19 @@ class AudioRedirect(AudioStreamTrack):
         return frame
 
 class MediaRedirect:
-    def __init__(self, file: str) -> None:
+    def __init__(
+        self, 
+        file: str, 
+        redirect_to_discord: RedirectDiscord = None,
+        redirect_from_discord: RedirectFromDiscordStream = None,
+    ) -> None:
         self.__audio = AudioRedirect()
         self.container = av.open(
             file=file, mode="w",
         )
+        self.redirect_to_discord = redirect_to_discord
+        self.redirect_to_discord._queues.update({self.__audio:asyncio.Queue()}) 
+        self.redirect_from_discord = redirect_from_discord
         self.stream = self.container.add_stream(codec_name="mp3")
         self.track = None
 
@@ -36,8 +68,16 @@ class MediaRedirect:
         while True:
             try:
                 frame = await track.recv()
-            except Exception as e:
+                discord_frame = None
+                if self.redirect_from_discord:
+                    discord_frame = self.redirect_from_discord.recv()
+            except Exception: 
                 return
+            if self.redirect_to_discord:
+                await self.redirect_to_discord._queues[self.__audio].put(frame)
+                await self.redirect_to_discord.recv()
+            if discord_frame:
+                frame = mix_audio_frames(frame, discord_frame)
             for packet in self.stream.encode(frame):
                 self.container.mux(packet)
             await self.__audio._queue.put(frame)

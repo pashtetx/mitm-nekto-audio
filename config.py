@@ -1,7 +1,12 @@
 from configparser import ConfigParser
-from typing import Generator, Union
+from typing import Generator, Union, Optional
 from core.client import Client
 from pathlib import Path
+
+def get_discord_token(path: Union[str, Path] = "config.ini") -> Optional[str]:
+    config = ConfigParser()
+    config.read(path)
+    return config.get("settings", "discord-token", fallback=None)
 
 def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Client]:
     config = ConfigParser()
@@ -28,7 +33,7 @@ def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Cli
                 "to":user_age.split(",")[1]
             }
         if search_age:
-            criteria["peerAge"] = [
+            criteria["peerAges"] = [
                 {
                     "from":age.split(",")[0],
                     "to":age.split(",")[1],
