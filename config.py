@@ -8,7 +8,7 @@ def get_discord_token(path: Union[str, Path] = "config.ini") -> Optional[str]:
     config.read(path)
     return config.get("settings", "discord-token", fallback=None)
 
-def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Client]:
+def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Client, None, None]:
     config = ConfigParser()
     config.read(path)
     names_of_clients = config.get("settings", "clients")

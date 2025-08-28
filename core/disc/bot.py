@@ -13,7 +13,7 @@ async def on_ready() -> None:
     )
     await bot.change_presence(activity=acitivity)
 
-@bot.slash_command(name="start", guild_ids=[1270812703874879663])
+@bot.slash_command(name="start")
 async def start(ctx: discord.ApplicationContext):
     await ctx.respond("Connecting...")
     sink = RedirectSink()
