@@ -1,6 +1,7 @@
 import hashlib
 import base64
 import av
+from typing import AsyncGenerator
 import numpy as np
 from aiortc import RTCPeerConnection
 
@@ -11,7 +12,7 @@ def alarm(user_id: str, internal_id: int) -> str:
         .hexdigest().encode()
     ).decode()
 
-async def get_ice_candidates(pc: RTCPeerConnection) -> None:
+async def get_ice_candidates(pc: RTCPeerConnection) -> AsyncGenerator:
     for transceiver in pc.getTransceivers():
         iceGatherer = transceiver.sender.transport.transport.iceGatherer
         for candidate in iceGatherer.getLocalCandidates():
