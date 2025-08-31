@@ -1,11 +1,22 @@
 from typing import Dict, Any, Union, Callable, Awaitable
 from inspect import iscoroutinefunction
 
+from contextlib import suppress
+
+import asyncio
+
 class Dispatcher:
 
     def __init__(self, default: Dict[str, Any] = {}) -> None:
         self.actions = {}
         self.default = default
+
+    def default_update(self, default: Dict[str, Any]) -> None:
+        self.default.update(default)
+
+    def default_remove(self, name: str) -> None:
+        with suppress(KeyError):
+            return self.default.pop(name)     
 
     def add_action(self, name: str, callback: Union[Callable, Awaitable]) -> None:
         if not self.actions.get(name): self.actions[name] = list()
@@ -14,6 +25,9 @@ class Dispatcher:
 
     def remove_action(self, name: str) -> None:
         self.actions[name].clear()
+
+    def clear_action(self) -> None:
+        self.actions.clear()
 
     async def dispatch_connect(self) -> None:
         await self.dispatch("connect", {})

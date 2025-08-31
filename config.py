@@ -3,10 +3,17 @@ from typing import Generator, Union, Optional
 from core.client import Client
 from pathlib import Path
 
-def get_discord_token(path: Union[str, Path] = "config.ini") -> Optional[str]:
+def get_discord_config(path: Union[str, Path] = "config.ini") -> Optional[dict]:
     config = ConfigParser()
     config.read(path)
-    return config.get("settings", "discord-token", fallback=None)
+    token = config.get("discord", "discord-token", fallback=None)
+    reconnect = config.getboolean("discord", "reconnect-after-dialog", fallback=False)
+    reconnect_delay = config.getfloat("discord", "reconnect-delay", fallback=5.0)
+    return {
+        "token":token,
+        "reconnect":reconnect,
+        "reconnect_delay":reconnect_delay,
+    }
 
 def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Client, None, None]:
     config = ConfigParser()
@@ -45,3 +52,5 @@ def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Cli
             ua=ua,
             search_criteria=criteria
         )
+
+discord_config = get_discord_config()

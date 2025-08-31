@@ -1,10 +1,16 @@
-from config import get_discord_token, parse_clients_config
+from config import discord_config, parse_clients_config
 from core.disc.bot import bot
 from core.room import Room
+
+from pathlib import Path
+
 import asyncio
+import os
 
 def start() -> None:
-    token = get_discord_token()
+    if not os.path.exists(Path("dialogs")):
+        os.mkdir("dialogs")
+    token = discord_config.get("token")
     if token:
         bot.run(token)
     else:

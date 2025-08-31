@@ -1,20 +1,26 @@
 [settings]
 clients=female-client,male-client
 ; Optional
-discord-token={your discord token} 
+
+[discord]
+discord-token={your discord-token}
+; Default: False
+reconnect-after-dialog=True 
+; 5 seconds
+reconnect-delay=5 
 
 [client/female-client]
 user_id={your user_id}
 ua={your ua}
 sex=FEMALE
 search-sex=MALE
-age=0,17
-search-age=0,17
+age=33,100
+search-age=33,100
 
 [client/male-client]
 user_id={your user_id}
 ua={your ua}
-sex=MALE
-search-sex=FEMALE
-age=0,17
-search-age=0,17
+sex=FEMALE
+search-sex=MALE
+age=33,100
+search-age=33,100

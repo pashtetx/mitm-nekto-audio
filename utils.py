@@ -1,9 +1,9 @@
 import hashlib
 import base64
 import av
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List
 import numpy as np
-from aiortc import RTCPeerConnection
+from aiortc import RTCPeerConnection, RTCConfiguration, RTCIceServer
 
 def alarm(user_id: str, internal_id: int) -> str:
     payload = user_id + "BYdKPTYYGZ7ALwA" + "8oNm2" + str(internal_id)
@@ -28,3 +28,13 @@ def mix_audio_frames(frame1: av.AudioFrame, frame2: av.AudioFrame) -> av.AudioFr
     frame.time_base = frame1.time_base
     return frame
 
+def parse_turn_params(params: List[str]) -> RTCConfiguration:
+    turn_params = list(filter(lambda key: not key["url"].startswith("turn:["), 
+        params))
+    return RTCConfiguration(
+        iceServers=[RTCIceServer(
+            urls=turn_param.get("url"),
+            username=turn_param.get("username"),
+            credential=turn_param.get("credential"),
+        ) for turn_param in turn_params]
+    )

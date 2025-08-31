@@ -53,6 +53,7 @@ class MediaRedirect:
         self.redirect_from_discord = redirect_from_discord
         self.stream = self.container.add_stream(codec_name="mp3")
         self.track = None
+        self.stoped = False
 
     def add_track(self, track: AudioRedirect) -> None:
         self.track = track
@@ -64,18 +65,27 @@ class MediaRedirect:
     async def start(self) -> None:
         asyncio.ensure_future(self.__run_track(self.track))
 
+    async def stop(self) -> None:
+        self.stoped = True
+
     async def __run_track(self, track: AudioRedirect) -> None:
         while True:
+            if self.stoped:
+                break
             try:
                 frame = await track.recv()
                 discord_frame = None
                 if self.redirect_from_discord:
                     discord_frame = self.redirect_from_discord.recv()
-            except Exception: 
+            except Exception as e: 
+                print(e)
                 return
             if self.redirect_to_discord:
-                await self.redirect_to_discord._queues[self.__audio].put(frame)
-                await self.redirect_to_discord.recv()
+                try:
+                    await self.redirect_to_discord._queues[self.__audio].put(frame)
+                    await self.redirect_to_discord.recv()
+                except OSError as e:
+                    print("pass")
             if discord_frame:
                 frame = mix_audio_frames(frame, discord_frame)
             for packet in self.stream.encode(frame):

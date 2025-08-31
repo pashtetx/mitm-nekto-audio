@@ -1,9 +1,18 @@
-from core.room import Room
-from config import parse_clients_config
+from core.room import Room, Member, Reconnect
+from config import parse_clients_config, discord_config
 from .sink import RedirectSink, RedirectFromDiscordStream
+
+from core.rtc import MediaRedirect, RedirectDiscord
+from core.handlers.client import register_client_handlers
+from core.handlers.peer import register_peer_handlers
+from pathlib import Path
+
 import discord
+import asyncio
 
 bot = discord.Bot(intents=discord.Intents.all())
+
+room = Room()
 
 @bot.event
 async def on_ready() -> None:
@@ -13,27 +22,48 @@ async def on_ready() -> None:
     )
     await bot.change_presence(activity=acitivity)
 
-@bot.slash_command(name="start")
-async def start(ctx: discord.ApplicationContext):
-    await ctx.respond("Connecting...")
+async def once_done(sink: discord.sinks, channel: discord.TextChannel, *args):
+    await sink.vc.disconnect()
+    await channel.send("End!")
+
+async def connect(channel: discord.TextChannel, author: discord.User) -> None:
+    await channel.send("Connecting...")
     sink = RedirectSink()
-    room = Room()
-    voice = ctx.author.voice
+    voice = author.voice
     if not voice:
-        return await ctx.respond("Not in voice!")
+        return await channel.send("Not in voice!")
     voice = await voice.channel.connect()
-    room.set_discord_redirect(voice)
+    redirect_to_discord = RedirectDiscord(voice)
     for client in parse_clients_config():
         stream = RedirectFromDiscordStream()
         sink.add_queue(stream.get_queue())
-        room.add_member(client, bot, stream)
-        if not client.transport.connected:
-            await client.connect(wait=False)
+        redirect = MediaRedirect(
+            file="dialogs" / Path(f"{client.user_id}.mp3"),
+            redirect_from_discord=stream,
+            redirect_to_discord=redirect_to_discord
+        )
+        room.add_member(Member(client=client, redirect=redirect))
+        register_client_handlers(client)
+        register_peer_handlers(client)
+        if not client.connected:
+            asyncio.ensure_future(client.connect(wait=True))
         else:
             await client.search()
     voice.start_recording(
         sink,
-        print,
-        ctx.channel
+        once_done,
+        channel
     )
-    await ctx.respond("Started!")
+    await channel.send("Started!")
+
+@bot.event
+async def on_message(message: discord.Message):
+    if message.content == "$start":
+        room.set_reconnect(Reconnect(connect, message.channel, message.author))
+        await connect(message.channel, message.author)
+    if message.content == "$stop":
+        await room.stop()
+    if message.content == "$next":
+        await room.stop()
+        await asyncio.sleep(discord_config.get("reconnect_delay"))
+        await connect(message.channel, message.author)
