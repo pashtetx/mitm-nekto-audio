@@ -40,6 +40,7 @@ class Room:
     def add_member(self, member: Member) -> None:
         member.client.add_action("peer-connect", self.__on_peer)
         member.client.add_action("peer-disconnect", self.__on_close)
+        member.client.add_action("search.out", self.__on_close)
         self.members.append(member)
     
     def get_member_by_client(self, client: Client) -> Member:
@@ -119,24 +120,23 @@ class Room:
         client.dispatcher.default_remove("room")
         client.dispatcher.default_remove("pc")
         voice = redirect.redirect_to_discord.vc
-        if voice.is_connected():
-            await voice.voice_disconnect()
-            await voice.disconnect(force=True)
         if not voice.is_connected():
-            await self.__reconnect()    
+            await self.__reconnect()
+        if voice.is_connected():
+            await voice.disconnect(force=True)
 
     async def stop(self) -> None:
         for member in self.members.copy():
             client = member.client
             redirect = member.redirect
             pc = member.pc
+            client.dispatcher.clear_action()
             await client.peer_disconnect()
             await pc.close()
             await redirect.stop()
             voice = redirect.redirect_to_discord.vc
             if voice.is_connected():
                 await voice.disconnect()
-            client.dispatcher.clear_action()
             await client.disconnect()
             self.members.clear()
             client.dispatcher.default_remove("redirect")

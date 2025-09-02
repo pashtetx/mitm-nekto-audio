@@ -20,8 +20,9 @@ class RedirectDiscord:
             return
         if all([queue.qsize() > 1 for _, queue in self._queues.items()]):
             frames = []
+            max_pts = 0
             for _, queue in self._queues.items():
-                frame = await queue.get()     
+                frame = await queue.get()  
                 frames.append(frame)               
             mixed = mix_audio_frames(*frames)
             for plane in mixed.planes:
@@ -78,7 +79,6 @@ class MediaRedirect:
                 if self.redirect_from_discord:
                     discord_frame = self.redirect_from_discord.recv()
             except Exception as e: 
-                print(e)
                 return
             if self.redirect_to_discord:
                 try:

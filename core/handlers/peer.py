@@ -2,7 +2,8 @@ from core.client import Client
 from core.rtc import MediaRedirect
 from core.room import Room
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.signaling import object_to_string, candidate_from_sdp
+from aiortc.contrib.media import MediaBlackhole
+from aiortc.contrib.signaling import candidate_from_sdp
 from contextlib import suppress
 from typing import Dict, Any
 
@@ -15,6 +16,7 @@ async def on_peer(
     pc: RTCPeerConnection,
     room: Room,
 ) -> None:
+    black_hole = MediaBlackhole()
     log = client.log
     initiator = payload.get("initiator")
     with suppress(AttributeError):
@@ -32,6 +34,10 @@ async def on_peer(
             log.info("Connection state change to *failed*.")
             await pc.close()
         if pc.connectionState == "connected":
+            if all([member.redirect.track for member in room.members]):
+                await black_hole.stop()
+                for member in room.members:
+                    await member.redirect.start()
             payload = {
                 "type":"peer-connection",
                 "connectionId":client.get_connection_id(),
@@ -43,9 +49,8 @@ async def on_peer(
     @pc.on("track")
     async def on_track(track) -> None:
         room.add_members_track(track, client)
-        if all([member.redirect.track for member in room.members]):
-            for member in room.members:
-                await member.redirect.start()
+        black_hole.addTrack(track)
+        await black_hole.start()
         log.info("User received a track.")
         payload = {
             "type":"stream-received",

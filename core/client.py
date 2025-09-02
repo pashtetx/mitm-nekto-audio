@@ -62,15 +62,21 @@ class Client(AsyncClient):
         await self.emit("event", data=payload)
 
     async def peer_disconnect(self) -> None:
-        connection_id = self.get_connection_id()
-        self.log.info("User disconnect a peer", connection_id=connection_id)
-        await self.emit(
-            "event", data={
-                "type":"peer-disconnect",
-                "connectionId":connection_id
-            }
-        )
-
+        try:
+            connection_id = self.get_connection_id()
+            self.log.info("User disconnect a peer", connection_id=connection_id)
+            await self.emit(
+                "event", data={
+                    "type":"peer-disconnect",
+                    "connectionId":connection_id
+                }
+            )
+        except AttributeError:
+            self.log.info("User stops scanning")
+            await self.emit("event", data={
+                "type":"stop-scan"
+            })
+            
     async def connect(self, wait: bool = True) -> None:
         self.on("connect", self.dispatcher.dispatch_connect)
         self.on("event", self.dispatcher.dispatch_socketio)
