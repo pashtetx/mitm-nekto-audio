@@ -9,6 +9,8 @@ from typing import Dict, Any
 
 import json
 
+black_hole = MediaBlackhole()
+
 async def on_peer(
     client: Client, 
     payload: Dict[str, Any],
@@ -16,7 +18,6 @@ async def on_peer(
     pc: RTCPeerConnection,
     room: Room,
 ) -> None:
-    black_hole = MediaBlackhole()
     log = client.log
     initiator = payload.get("initiator")
     with suppress(AttributeError):
@@ -57,6 +58,7 @@ async def on_peer(
             "connectionId":client.get_connection_id()
         }
         await client.emit("event", data=payload)
+    
     if initiator:
         pc.addTrack(redirect.audio)
         offer = await pc.createOffer()
