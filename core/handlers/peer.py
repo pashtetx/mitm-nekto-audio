@@ -36,9 +36,11 @@ async def on_peer(
             await pc.close()
         if pc.connectionState == "connected":
             if all([member.redirect.track for member in room.members]):
-                await black_hole.stop()
                 for member in room.members:
                     await member.redirect.start()
+            if all([member.pc for member in room.members]) \
+                and all([member.pc.connectionState == "connected" for member in room.members]):
+                await room.connect_voice()   
             payload = {
                 "type":"peer-connection",
                 "connectionId":client.get_connection_id(),
@@ -51,7 +53,6 @@ async def on_peer(
     async def on_track(track) -> None:
         room.add_members_track(track, client)
         black_hole.addTrack(track)
-        await black_hole.start()
         log.info("User received a track.")
         payload = {
             "type":"stream-received",
@@ -102,7 +103,11 @@ async def on_offer(
     }
     log.info("Sent answer.")
     await client.emit("event", data=payload)
-    await room.send_ice_candidates(pc, client)
+    with suppress(AttributeError):
+        if all([member.client.get_connection_id() for member in room.members]):
+            for member in room.members:
+                await room.send_ice_candidates(member.pc, member.client)
+    
 
 async def on_answer(
     client: Client, 
@@ -119,7 +124,10 @@ async def on_answer(
         type=answer.get("type")
     )
     await pc.setRemoteDescription(remote_description)
-    await room.send_ice_candidates(pc, client)
+    with suppress(AttributeError):
+        if all([member.client.get_connection_id() for member in room.members]):
+            for member in room.members:
+                await room.send_ice_candidates(member.pc, member.client)
 
 async def on_ice_candidate(
     client: Client, 

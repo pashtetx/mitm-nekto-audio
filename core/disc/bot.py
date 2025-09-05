@@ -1,14 +1,15 @@
 from core.room import Room, Member, Reconnect
 from config import parse_clients_config, discord_config
-from .sink import RedirectSink, RedirectFromDiscordStream
 
-from core.rtc import MediaRedirect, RedirectDiscord
 from core.handlers.client import register_client_handlers
 from core.handlers.peer import register_peer_handlers
+
 from pathlib import Path
+from core.rtc import MediaRedirect
 
 import discord
 import asyncio
+import time
 
 bot = discord.Bot(intents=discord.Intents.all())
 
@@ -22,38 +23,25 @@ async def on_ready() -> None:
     )
     await bot.change_presence(activity=acitivity)
 
-async def once_done(sink: discord.sinks, channel: discord.TextChannel, *args):
-    await sink.vc.disconnect()
-    await channel.send("End!")
-
 async def connect(channel: discord.TextChannel, author: discord.User) -> None:
     await channel.send("Connecting...")
-    sink = RedirectSink()
     voice = author.voice
     if not voice:
         return await channel.send("Not in voice!")
-    voice = await voice.channel.connect()
-    redirect_to_discord = RedirectDiscord(voice)
+    voice = voice.channel
+    room.set_voice_client(voice)
     for client in parse_clients_config():
-        stream = RedirectFromDiscordStream()
-        sink.add_queue(stream.get_queue())
-        redirect = MediaRedirect(
-            file="dialogs" / Path(f"{client.user_id}.mp3"),
-            redirect_from_discord=stream,
-            redirect_to_discord=redirect_to_discord
+        room.add_member(Member(
+                client=client,
+                redirect=MediaRedirect(file="dialogs" / Path(f"{client.user_id}-{round(time.time())}.mp3"),)
+            )
         )
-        room.add_member(Member(client=client, redirect=redirect))
         register_client_handlers(client)
         register_peer_handlers(client)
         if not client.connected:
             asyncio.ensure_future(client.connect(wait=True))
         else:
             await client.search()
-    voice.start_recording(
-        sink,
-        once_done,
-        channel
-    )
     await channel.send("Started!")
 
 @bot.event

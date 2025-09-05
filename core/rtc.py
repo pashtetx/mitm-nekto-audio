@@ -20,7 +20,6 @@ class RedirectDiscord:
             return
         if all([queue.qsize() > 1 for _, queue in self._queues.items()]):
             frames = []
-            max_pts = 0
             for _, queue in self._queues.items():
                 frame = await queue.get()  
                 frames.append(frame)               
@@ -42,19 +41,23 @@ class MediaRedirect:
     def __init__(
         self, 
         file: str, 
-        redirect_to_discord: RedirectDiscord = None,
-        redirect_from_discord: RedirectFromDiscordStream = None,
     ) -> None:
         self.__audio = AudioRedirect()
         self.container = av.open(
             file=file, mode="w",
         )
-        self.redirect_to_discord = redirect_to_discord
-        self.redirect_to_discord._queues.update({self.__audio:asyncio.Queue()}) 
-        self.redirect_from_discord = redirect_from_discord
         self.stream = self.container.add_stream(codec_name="mp3")
         self.track = None
         self.stoped = False
+        self.redirect_from_discord = None
+        self.redirect_to_discord = None
+
+    def set_redirect_from_discord(self, stream: RedirectFromDiscordStream) -> None:
+        self.redirect_from_discord = stream
+
+    def set_redirect_to_discord(self, redirect_to_discord: RedirectDiscord) -> None:
+        self.redirect_to_discord = redirect_to_discord
+        self.redirect_to_discord._queues.update({self.__audio:asyncio.Queue()}) 
 
     def add_track(self, track: AudioRedirect) -> None:
         self.track = track

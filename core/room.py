@@ -10,16 +10,25 @@ from aiortc.contrib.signaling import object_to_string
 from dataclasses import dataclass
 from utils import parse_turn_params
 
+from core.disc.sink import RedirectSink, RedirectFromDiscordStream
+from core.rtc import MediaRedirect, RedirectDiscord
+from pathlib import Path
+
 from config import discord_config
 
+import time
 import asyncio
 import discord
 import json
 
+async def once_done(sink: discord.sinks, channel: discord.TextChannel, *args):
+    await sink.vc.disconnect()
+    await channel.send("End!")
+
 @dataclass
 class Member:
     client: Client
-    redirect: MediaRedirect
+    redirect: Optional[MediaRedirect] = None
     pc: Optional[RTCPeerConnection] = None
 
 @dataclass
@@ -33,9 +42,29 @@ class Room:
     def __init__(self) -> None:
         self.members: List[Member] = list()
         self.reconnect_callback = None
-    
+        self.vc = None
+
+    def set_voice_client(self, vc: discord.VoiceClient) -> None:
+        self.vc = vc
+        self.sink = RedirectSink()
+        self.redirect_to_discord = None
+
     def set_reconnect(self, reconnect: Reconnect) -> None:
         self.reconnect_callback = reconnect
+
+    async def connect_voice(self) -> None:
+        voice = await self.vc.connect()
+        redirect_to_discord = RedirectDiscord(voice)
+        for member in self.members:
+            stream = RedirectFromDiscordStream()
+            self.sink.add_queue(stream.get_queue())
+            member.redirect.set_redirect_to_discord(redirect_to_discord)
+            member.redirect.set_redirect_from_discord(stream)
+        voice.start_recording(
+            self.sink,
+            once_done,
+            self.vc,
+        )
 
     def add_member(self, member: Member) -> None:
         member.client.add_action("peer-connect", self.__on_peer)
@@ -119,11 +148,11 @@ class Room:
         client.dispatcher.default_remove("redirect")
         client.dispatcher.default_remove("room")
         client.dispatcher.default_remove("pc")
-        voice = redirect.redirect_to_discord.vc
-        if not voice.is_connected():
+        voice = redirect.redirect_to_discord
+        if voice and not voice.vc.is_connected():
             await self.__reconnect()
-        if voice.is_connected():
-            await voice.disconnect(force=True)
+        if voice and voice.vc.is_connected():
+            await voice.vc.disconnect(force=True)
 
     async def stop(self) -> None:
         for member in self.members.copy():
@@ -134,9 +163,9 @@ class Room:
             await client.peer_disconnect()
             await pc.close()
             await redirect.stop()
-            voice = redirect.redirect_to_discord.vc
-            if voice.is_connected():
-                await voice.disconnect()
+            voice = redirect.redirect_to_discord
+            if voice and voice.is_connected():
+                await voice.vc.disconnect()
             await client.disconnect()
             self.members.clear()
             client.dispatcher.default_remove("redirect")
