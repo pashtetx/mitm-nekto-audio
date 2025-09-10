@@ -16,6 +16,14 @@ async def on_connect(client: Client, payload: Dict[str, Any]) -> None:
     await client.emit("event", data=payload)
     client.log.info("User sent register payload.")
 
+async def on_error(client: Client, payload: Dict[str, Any], *args, **kwargs) -> None:
+    client.log.critical(
+        "Unknown error {}: {}".format(
+            payload.get("id"), 
+            payload.get("description")
+        )
+    )
+
 async def on_auth(client: Client, payload: Dict[str, Any]) -> None:
     internal_id = payload.get("internal_id")
     webagent = alarm(client.user_id, internal_id)

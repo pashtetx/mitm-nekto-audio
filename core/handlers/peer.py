@@ -32,8 +32,9 @@ async def on_peer(
         if pc.connectionState == "connecting":
             log.info("Connection state change to *connecting*.")
         if pc.connectionState == "failed":
-            log.info("Connection state change to *failed*.")
+            log.warn("Connection state change to *failed*.")
             await pc.close()
+            await room.stop()
         if pc.connectionState == "connected":
             if all([member.redirect.track for member in room.members]):
                 for member in room.members:
@@ -107,7 +108,6 @@ async def on_offer(
         if all([member.client.get_connection_id() for member in room.members]):
             for member in room.members:
                 await room.send_ice_candidates(member.pc, member.client)
-    
 
 async def on_answer(
     client: Client, 

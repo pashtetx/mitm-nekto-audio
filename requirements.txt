@@ -1,7 +1,8 @@
 python-socketio==5.0.1
-aiortc==1.12.0
+aiortc==1.13.0
 structlog==25.4.0
-py-cord[voice]
+py-cord @ git+https://github.com/Pycord-Development/pycord.git@2ae01b796647466861eead7da7cd1c7065a1543a
 numpy==2.3.2
-av==14
 PyNaCl==1.5.0
+audioop-lts==0.2.2
+av==14.0.0

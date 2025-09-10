@@ -131,28 +131,23 @@ class Room:
         room: Self,
     ) -> None:
         for member in self.members:
-            if member.client != client:
-                await member.client.peer_disconnect()
-        member = self.get_member_by_client(client)
-        if not member:
-            return
-        client = member.client
-        redirect = member.redirect
-        pc = member.pc
-        await pc.close()
-        await client.disconnect()
-        await redirect.stop()
-        client.dispatcher.clear_action()
-        await client.disconnect()
-        self.members.remove(member)
-        client.dispatcher.default_remove("redirect")
-        client.dispatcher.default_remove("room")
-        client.dispatcher.default_remove("pc")
-        voice = redirect.redirect_to_discord
-        if voice and not voice.vc.is_connected():
-            await self.__reconnect()
-        if voice and voice.vc.is_connected():
-            await voice.vc.disconnect(force=True)
+            pc, redirect, other_client = member.pc, member.redirect, member.client
+            if other_client != client:
+                other_client.dispatcher.clear_action()
+                await other_client.peer_disconnect()
+            if pc:
+                await pc.close()
+            await other_client.disconnect()
+            if redirect:
+                await redirect.stop()
+            self.members.clear()
+            other_client.dispatcher.default_remove("redirect")
+            other_client.dispatcher.default_remove("room")
+            other_client.dispatcher.default_remove("pc")
+            voice = redirect.redirect_to_discord
+            if voice:
+                await voice.vc.disconnect(force=True)
+                await self.__reconnect()
 
     async def stop(self) -> None:
         for member in self.members.copy():
