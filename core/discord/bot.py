@@ -33,7 +33,7 @@ async def connect(channel: discord.TextChannel, author: discord.User) -> None:
     for client in parse_clients_config():
         room.add_member(Member(
                 client=client,
-                redirect=MediaRedirect(file="dialogs" / Path(f"{client.user_id}-{round(time.time())}.mp3"),)
+                redirect=MediaRedirect()
             )
         )
         register_client_handlers(client)
@@ -53,5 +53,3 @@ async def on_message(message: discord.Message):
         await room.stop()
     if message.content == "$next":
         await room.stop()
-        await asyncio.sleep(discord_config.get("reconnect_delay"))
-        await connect(message.channel, message.author)

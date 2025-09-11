@@ -1,12 +1,14 @@
 from aiortc.mediastreams import AudioStreamTrack
 from av import AudioFrame
 
-from core.disc.sink import RedirectFromDiscordStream
+from core.discord.sink import RedirectFromDiscordStream
 
 from discord import VoiceClient
 
 from utils import mix_audio_frames
 
+from datetime import datetime
+from pathlib import Path
 import av
 import asyncio
 
@@ -14,6 +16,11 @@ class RedirectDiscord:
     def __init__(self, vc: VoiceClient) -> None:
         self._queues = dict()
         self.vc = vc
+        self.container = av.open(
+            file=Path("dialogs") /
+            datetime.now().strftime("%Y-%m-%d-%H-%M-%S.mp3"), mode="w",
+        )
+        self.stream = self.container.add_stream(codec_name="mp3")
 
     async def recv(self) -> None:
         if len(self._queues) < 2:
@@ -26,7 +33,9 @@ class RedirectDiscord:
             mixed = mix_audio_frames(*frames)
             for plane in mixed.planes:
                 packet = bytes(plane)
-            self.vc.send_audio_packet(packet)
+                self.vc.send_audio_packet(packet)
+            for packet in self.stream.encode(mixed):
+                self.container.mux(packet)
 
 class AudioRedirect(AudioStreamTrack):
     def __init__(self) -> None:
@@ -40,13 +49,8 @@ class AudioRedirect(AudioStreamTrack):
 class MediaRedirect:
     def __init__(
         self, 
-        file: str, 
     ) -> None:
         self.__audio = AudioRedirect()
-        self.container = av.open(
-            file=file, mode="w",
-        )
-        self.stream = self.container.add_stream(codec_name="mp3")
         self.track = None
         self.stoped = False
         self.redirect_from_discord = None
@@ -91,8 +95,6 @@ class MediaRedirect:
                     print("pass")
             if discord_frame:
                 frame = mix_audio_frames(frame, discord_frame)
-            for packet in self.stream.encode(frame):
-                self.container.mux(packet)
             await self.__audio._queue.put(frame)
             
     

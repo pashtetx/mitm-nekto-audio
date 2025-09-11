@@ -10,13 +10,11 @@ from aiortc.contrib.signaling import object_to_string
 from dataclasses import dataclass
 from utils import parse_turn_params
 
-from core.disc.sink import RedirectSink, RedirectFromDiscordStream
+from core.discord.sink import RedirectSink, RedirectFromDiscordStream
 from core.rtc import MediaRedirect, RedirectDiscord
-from pathlib import Path
 
 from config import discord_config
 
-import time
 import asyncio
 import discord
 import json
@@ -132,12 +130,10 @@ class Room:
     ) -> None:
         for member in self.members:
             pc, redirect, other_client = member.pc, member.redirect, member.client
-            if other_client != client:
-                other_client.dispatcher.clear_action()
-                await other_client.peer_disconnect()
-            if pc:
+            other_client.dispatcher.clear_action()
+            if pc and pc.connectionState != "closed":
                 await pc.close()
-            await other_client.disconnect()
+            await other_client.peer_disconnect()
             if redirect:
                 await redirect.stop()
             self.members.clear()
@@ -148,6 +144,7 @@ class Room:
             if voice:
                 await voice.vc.disconnect(force=True)
                 await self.__reconnect()
+            await other_client.disconnect()
 
     async def stop(self) -> None:
         for member in self.members.copy():
@@ -159,10 +156,11 @@ class Room:
             await pc.close()
             await redirect.stop()
             voice = redirect.redirect_to_discord
-            if voice and voice.is_connected():
+            if voice and voice.vc.is_connected():
                 await voice.vc.disconnect()
             await client.disconnect()
             self.members.clear()
             client.dispatcher.default_remove("redirect")
             client.dispatcher.default_remove("room")
             client.dispatcher.default_remove("pc")
+        await self.__reconnect()

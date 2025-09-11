@@ -1,5 +1,5 @@
 from config import discord_config, parse_clients_config
-from core.disc.bot import bot
+from core.discord.bot import bot
 from core.room import Room
 
 from pathlib import Path
