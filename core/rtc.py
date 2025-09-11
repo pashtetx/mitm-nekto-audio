@@ -52,9 +52,10 @@ class MediaRedirect:
     ) -> None:
         self.__audio = AudioRedirect()
         self.track = None
-        self.stoped = False
+        self.started = False
         self.redirect_from_discord = None
         self.redirect_to_discord = None
+        self.task = None
 
     def set_redirect_from_discord(self, stream: RedirectFromDiscordStream) -> None:
         self.redirect_from_discord = stream
@@ -71,15 +72,15 @@ class MediaRedirect:
         return self.__audio
 
     async def start(self) -> None:
-        asyncio.ensure_future(self.__run_track(self.track))
+        self.started = True
+        self.task = asyncio.ensure_future(self.__run_track(self.track))
 
     async def stop(self) -> None:
-        self.stoped = True
+        self.started = False
+        self.task.cancel()
 
     async def __run_track(self, track: AudioRedirect) -> None:
         while True:
-            if self.stoped:
-                break
             try:
                 frame = await track.recv()
                 discord_frame = None

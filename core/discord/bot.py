@@ -39,7 +39,7 @@ async def connect(channel: discord.TextChannel, author: discord.User) -> None:
         register_client_handlers(client)
         register_peer_handlers(client)
         if not client.connected:
-            asyncio.ensure_future(client.connect(wait=True))
+            await client.connect(wait=False)
         else:
             await client.search()
     await channel.send("Started!")

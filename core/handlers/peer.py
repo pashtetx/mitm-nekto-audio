@@ -35,6 +35,9 @@ async def on_peer(
             log.warn("Connection state change to *failed*.")
             await pc.close()
             await room.stop()
+        if pc.connectionState == "closed":
+            log.warn("Connection state change to *closed*.")
+            await pc.close()
         if pc.connectionState == "connected":
             if all([member.redirect.track for member in room.members]):
                 for member in room.members:
