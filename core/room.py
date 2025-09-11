@@ -114,6 +114,8 @@ class Room:
         configuration = parse_turn_params(json.loads(payload.get("turnParams")))
         pc = RTCPeerConnection(configuration=configuration)
         member = self.get_member_by_client(client)
+        if not member:
+            return
         member.pc = pc
         client.dispatcher.default_update({
             "pc":pc,
@@ -143,8 +145,9 @@ class Room:
             voice = redirect.redirect_to_discord
             if voice:
                 await voice.vc.disconnect(force=True)
-                await self.__reconnect()
             await other_client.disconnect()
+        await self.__reconnect()
+
 
     async def stop(self) -> None:
         for member in self.members.copy():
