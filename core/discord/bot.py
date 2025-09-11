@@ -1,15 +1,12 @@
 from core.room import Room, Member, Reconnect
-from config import parse_clients_config, discord_config
+from config import parse_clients_config
 
 from core.handlers.client import register_client_handlers
 from core.handlers.peer import register_peer_handlers
 
-from pathlib import Path
-from core.rtc import MediaRedirect
+from core.rtc import MediaRedirect, MediaRecorder
 
 import discord
-import asyncio
-import time
 
 bot = discord.Bot(intents=discord.Intents.all())
 
@@ -29,19 +26,18 @@ async def connect(channel: discord.TextChannel, author: discord.User) -> None:
     if not voice:
         return await channel.send("Not in voice!")
     voice = voice.channel
+    recorder = MediaRecorder()
     room.set_voice_client(voice)
     for client in parse_clients_config():
-        room.add_member(Member(
+        room.add_member(
+            Member(
                 client=client,
-                redirect=MediaRedirect()
+                redirect=MediaRedirect(recorder=recorder)
             )
         )
         register_client_handlers(client)
         register_peer_handlers(client)
-        if not client.connected:
-            await client.connect(wait=False)
-        else:
-            await client.search()
+        await client.connect(wait=False)
     await channel.send("Started!")
 
 @bot.event

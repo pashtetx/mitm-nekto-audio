@@ -24,6 +24,13 @@ async def on_error(client: Client, payload: Dict[str, Any], *args, **kwargs) -> 
         )
     )
 
+async def on_ban(client: Client, payload: Dict[str, Any], *args, **kwargs) -> None:
+    client.log.critical(
+        "You have been banned on nekto.me: {}".format(
+            payload.get("banInfo")
+        )
+    )
+
 async def on_auth(client: Client, payload: Dict[str, Any]) -> None:
     internal_id = payload.get("internal_id")
     webagent = alarm(client.user_id, internal_id)
@@ -46,3 +53,5 @@ def register_client_handlers(client: Client) -> None:
     client.add_action(name="registered", callback=on_auth)
     client.add_action(name="peer-connect", callback=on_peer)
     client.add_action(name="peer-disconnect", callback=on_close)
+    client.add_action(name="ban", callback=on_ban)
+    client.add_action(name="error", callback=on_error)

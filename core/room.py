@@ -51,6 +51,8 @@ class Room:
         self.reconnect_callback = reconnect
 
     async def connect_voice(self) -> None:
+        if not self.vc:
+            return
         voice = await self.vc.connect()
         redirect_to_discord = RedirectDiscord(voice)
         for member in self.members:
@@ -92,8 +94,6 @@ class Room:
     async def send_ice_candidates(self, pc: RTCPeerConnection, client: Client) -> None:
         log = client.log
         log.info("Sending ice canidates.") 
-        if pc.connectionState != "connecting":
-            return
         async for candidate in get_ice_candidates(pc):
             candidate_string = json.loads(object_to_string(candidate)).get("candidate")
             payload = {
@@ -112,7 +112,7 @@ class Room:
             await client.emit("event", data=payload)
             log.info("Sent ice canidates.") 
 
-    def __on_peer(self, client: Client, payload: Dict[str, Any]) -> None:
+    def __on_peer(self, client: Client, payload: Dict[str, Any], *args, **kwargs) -> None:
         member = self.get_member_by_client(client)
         if not member:
             return
@@ -134,17 +134,17 @@ class Room:
     ) -> None:
         for member in self.members:
             redirect, other_client = member.redirect, member.client
+            other_client.dispatcher.clear_action()
             if redirect and redirect.started:
                 await redirect.stop()
-            other_client.dispatcher.clear_action()
+                voice = redirect.redirect_to_discord
+                if voice and voice.vc.is_connected():
+                    await voice.vc.disconnect(force=True)
             await other_client.peer_disconnect()
             await other_client.disconnect()
             other_client.dispatcher.default_remove("redirect")
             other_client.dispatcher.default_remove("room")
             other_client.dispatcher.default_remove("pc")
-            voice = redirect.redirect_to_discord
-            if voice:
-                await voice.vc.disconnect(force=True)
         self.members.clear()
         await self.__reconnect()
 

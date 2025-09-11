@@ -7,20 +7,20 @@ from discord import VoiceClient
 
 from utils import mix_audio_frames
 
+from contextlib import suppress
+
 from datetime import datetime
 from pathlib import Path
 import av
 import asyncio
 
-class RedirectDiscord:
-    def __init__(self, vc: VoiceClient) -> None:
+class BaseMedia:
+
+    def __init__(self):
         self._queues = dict()
-        self.vc = vc
-        self.container = av.open(
-            file=Path("dialogs") /
-            datetime.now().strftime("%Y-%m-%d-%H-%M-%S.mp3"), mode="w",
-        )
-        self.stream = self.container.add_stream(codec_name="mp3")
+
+    async def callback(self, mixed: av.AudioFrame) -> None:
+        raise NotImplementedError()
 
     async def recv(self) -> None:
         if len(self._queues) < 2:
@@ -31,11 +31,36 @@ class RedirectDiscord:
                 frame = await queue.get()  
                 frames.append(frame)               
             mixed = mix_audio_frames(*frames)
-            for plane in mixed.planes:
-                packet = bytes(plane)
-                self.vc.send_audio_packet(packet)
-            for packet in self.stream.encode(mixed):
-                self.container.mux(packet)
+            await self.callback(mixed)
+
+    async def put(self, frame: av.AudioFrame, track: AudioStreamTrack) -> None:
+        if not self._queues.get(track):
+            self._queues.update({track:asyncio.Queue()})
+        await self._queues[track].put(frame) 
+        await self.recv()
+
+class MediaRecorder(BaseMedia):
+    def __init__(self, file: str = None):
+        file = file or Path("dialogs") / datetime.now().strftime("%Y-%m-%d-%H-%M-%S.mp3")
+        self.container = av.open(
+            file=file, mode="w",
+        )
+        self.stream = self.container.add_stream(codec_name="mp3")
+        super().__init__()
+
+    async def callback(self, mixed):
+        for packet in self.stream.encode(mixed):
+            self.container.mux(packet)
+
+class RedirectDiscord(BaseMedia):
+    def __init__(self, vc: VoiceClient) -> None:
+        self.vc = vc
+        super().__init__()
+
+    async def callback(self, mixed):
+        for plane in mixed.planes:
+            packet = bytes(plane)
+            self.vc.send_audio_packet(packet)
 
 class AudioRedirect(AudioStreamTrack):
     def __init__(self) -> None:
@@ -49,6 +74,7 @@ class AudioRedirect(AudioStreamTrack):
 class MediaRedirect:
     def __init__(
         self, 
+        recorder: MediaRecorder,
     ) -> None:
         self.__audio = AudioRedirect()
         self.track = None
@@ -56,13 +82,13 @@ class MediaRedirect:
         self.redirect_from_discord = None
         self.redirect_to_discord = None
         self.task = None
+        self.recorder = recorder
 
     def set_redirect_from_discord(self, stream: RedirectFromDiscordStream) -> None:
         self.redirect_from_discord = stream
 
     def set_redirect_to_discord(self, redirect_to_discord: RedirectDiscord) -> None:
         self.redirect_to_discord = redirect_to_discord
-        self.redirect_to_discord._queues.update({self.__audio:asyncio.Queue()}) 
 
     def add_track(self, track: AudioRedirect) -> None:
         self.track = track
@@ -86,16 +112,14 @@ class MediaRedirect:
                 discord_frame = None
                 if self.redirect_from_discord:
                     discord_frame = self.redirect_from_discord.recv()
-            except Exception as e: 
+            except Exception: 
                 return
             if self.redirect_to_discord:
-                try:
-                    await self.redirect_to_discord._queues[self.__audio].put(frame)
-                    await self.redirect_to_discord.recv()
-                except OSError as e:
-                    print("pass")
+                with suppress(OSError):
+                    await self.redirect_to_discord.put(frame, self.__audio)
             if discord_frame:
                 frame = mix_audio_frames(frame, discord_frame)
+            await self.recorder.put(frame, self.__audio)
             await self.__audio._queue.put(frame)
             
     
