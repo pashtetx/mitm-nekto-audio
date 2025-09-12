@@ -17,6 +17,9 @@ class Dispatcher:
     def default_remove(self, name: str) -> None:
         with suppress(KeyError):
             return self.default.pop(name)     
+        
+    def clear_default(self) -> None:
+        self.default.clear() 
 
     def add_action(self, name: str, callback: Union[Callable, Awaitable]) -> None:
         if not self.actions.get(name): self.actions[name] = list()

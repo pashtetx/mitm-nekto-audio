@@ -29,13 +29,13 @@ async def connect(channel: discord.TextChannel, author: discord.User) -> None:
     recorder = MediaRecorder()
     room.set_voice_client(voice)
     for client in parse_clients_config():
+        register_client_handlers(client)
         room.add_member(
             Member(
                 client=client,
                 redirect=MediaRedirect(recorder=recorder)
             )
         )
-        register_client_handlers(client)
         register_peer_handlers(client)
         await client.connect(wait=False)
     await channel.send("Started!")

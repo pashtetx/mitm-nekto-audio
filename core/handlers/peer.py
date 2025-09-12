@@ -36,14 +36,13 @@ async def on_peer(
             await pc.close()
             await room.stop()
         if pc.connectionState == "closed":
-            log.warn("Connection state change to *closed*.")
+            log.info("Connection state change to *closed*.")
             await pc.close()
-        if pc.connectionState == "connected":
-            if all([member.redirect.track for member in room.members]):
-                for member in room.members:
-                    await member.redirect.start()
+        if pc.connectionState == "connected":       
             if all([member.pc for member in room.members]) \
                 and all([member.pc.connectionState == "connected" for member in room.members]):
+                for member in room.members:
+                    await member.redirect.start()
                 await room.connect_voice()   
             payload = {
                 "type":"peer-connection",

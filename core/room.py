@@ -15,6 +15,8 @@ from core.rtc import MediaRedirect, RedirectDiscord
 
 from config import discord_config
 
+from contextlib import suppress
+
 import asyncio
 import discord
 import json
@@ -91,6 +93,21 @@ class Room:
                 self.reconnect_callback.user
             )
 
+    async def disconnect_all_members(self) -> None:
+        for member in self.members:
+            with suppress(AttributeError):
+                if member.client.get_connection_id():
+                    await member.client.peer_disconnect()
+
+    async def disconnect_voice(self, redirect: MediaRedirect) -> None:
+        voice = redirect.redirect_to_discord
+        if not voice:
+            return
+        voice = voice.vc
+        if not voice or not voice.is_connected():
+            return
+        await voice.disconnect(force=True)
+
     async def send_ice_candidates(self, pc: RTCPeerConnection, client: Client) -> None:
         log = client.log
         log.info("Sending ice canidates.") 
@@ -132,39 +149,28 @@ class Room:
         pc: RTCPeerConnection,
         room: Self,
     ) -> None:
-        for member in self.members:
-            redirect, other_client = member.redirect, member.client
-            other_client.dispatcher.clear_action()
-            if redirect and redirect.started:
-                await redirect.stop()
-                voice = redirect.redirect_to_discord
-                if voice and voice.vc.is_connected():
-                    await voice.vc.disconnect(force=True)
-            await other_client.peer_disconnect()
-            await other_client.disconnect()
-            other_client.dispatcher.default_remove("redirect")
-            other_client.dispatcher.default_remove("room")
-            other_client.dispatcher.default_remove("pc")
-        self.members.clear()
-        await self.__reconnect()
+        await self.disconnect_all_members()
+        await client.disconnect()
+        await redirect.stop()
+        client.dispatcher.clear_default()
+        client.dispatcher.clear_action()
+        self.members.remove(self.get_member_by_client(client))
+        await self.disconnect_voice(redirect)
+        if len(self.members) == 0:
+            await self.__reconnect()
 
     async def stop(self) -> None:
         for member in self.members:
             client = member.client
             redirect = member.redirect
             pc = member.pc
-            client.dispatcher.clear_action()
-            await client.peer_disconnect()
             if pc and pc.connectionState == "connected":
                 await pc.close()
-            if redirect:
-                await redirect.stop()
-                voice = redirect.redirect_to_discord
-                if voice and voice.vc.is_connected():
-                    await voice.vc.disconnect()
+            await redirect.stop()
+            await self.disconnect_voice(member.redirect)
+            await client.peer_disconnect()                    
             await client.disconnect()
-            client.dispatcher.default_remove("redirect")
-            client.dispatcher.default_remove("room")
-            client.dispatcher.default_remove("pc")
+            client.dispatcher.clear_default()
+            client.dispatcher.clear_action()
         self.members.clear()
         await self.__reconnect()

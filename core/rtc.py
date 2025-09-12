@@ -103,7 +103,8 @@ class MediaRedirect:
 
     async def stop(self) -> None:
         self.started = False
-        self.task.cancel()
+        if self.task:
+            self.task.cancel()
 
     async def __run_track(self, track: AudioRedirect) -> None:
         while True:
