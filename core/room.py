@@ -99,10 +99,14 @@ class Room:
                 if member.client.get_connection_id():
                     await member.client.peer_disconnect()
 
-    async def disconnect_voice(self) -> None:
-        if not self.vc or not self.vc.is_connected():
+    async def disconnect_voice(self, redirect: MediaRedirect) -> None:
+        voice = redirect.redirect_to_discord
+        if not voice:
             return
-        await self.vc.disconnect(force=True)
+        voice = voice.vc
+        if not voice or not voice.is_connected():
+            return
+        await voice.disconnect(force=True)
 
     async def send_ice_candidates(self, pc: RTCPeerConnection, client: Client) -> None:
         log = client.log
