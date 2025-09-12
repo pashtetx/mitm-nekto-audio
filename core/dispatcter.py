@@ -47,4 +47,3 @@ class Dispatcher:
                 await action(**self.default, payload=payload)
             else:
                 action(**self.default, payload=payload)
-            
