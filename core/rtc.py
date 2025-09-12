@@ -112,6 +112,7 @@ class MediaRedirect:
                 discord_frame = None
                 if self.redirect_from_discord:
                     discord_frame = self.redirect_from_discord.recv()
+                await self.recorder.put(frame, self.__audio)
             except Exception: 
                 return
             if self.redirect_to_discord:
@@ -119,7 +120,6 @@ class MediaRedirect:
                     await self.redirect_to_discord.put(frame, self.__audio)
             if discord_frame:
                 frame = mix_audio_frames(frame, discord_frame)
-            await self.recorder.put(frame, self.__audio)
             await self.__audio._queue.put(frame)
             
     
