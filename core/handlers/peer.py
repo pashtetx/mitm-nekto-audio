@@ -32,7 +32,7 @@ async def on_peer(
         if pc.connectionState == "connecting":
             log.info("Connection state change to *connecting*.")
         if pc.connectionState == "failed":
-            log.warn("Connection state change to *failed*.")
+            log.info("Connection state change to *failed*.")
             await pc.close()
             await room.stop()
         if pc.connectionState == "closed":
