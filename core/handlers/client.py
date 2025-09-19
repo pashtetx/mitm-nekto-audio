@@ -6,7 +6,7 @@ async def on_connect(client: Client, payload: Dict[str, Any]) -> None:
     payload = {
         "type":"register",
         "android":False,
-        "version":20,
+        "version":21,
         "userId":client.user_id,
         "timeZone":client.time_zone,
         "locale":client.locale

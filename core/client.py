@@ -15,7 +15,7 @@ class Client(AsyncClient):
         user_id: str,
         ua: str,
         locale: str = "en",
-        time_zone: str = "Europe/Kiev",
+        time_zone: str = "Europe/Berlin",
         search_criteria: Dict[str, Any] = {
             "peerSex": "ANY",
             "group": 0,

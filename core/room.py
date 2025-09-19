@@ -21,9 +21,8 @@ import asyncio
 import discord
 import json
 
-async def once_done(sink: discord.sinks, channel: discord.TextChannel, *args):
+async def once_done(sink: discord.sinks, *args):
     await sink.vc.disconnect()
-    await channel.send("End!")
 
 @dataclass
 class Member:
@@ -156,7 +155,7 @@ class Room:
         client.dispatcher.clear_action()
         self.members.remove(self.get_member_by_client(client))
         await self.disconnect_voice(redirect)
-        if len(self.members) == 0:
+        if len(self.members) == 1:
             await self.__reconnect()
 
     async def stop(self) -> None:
