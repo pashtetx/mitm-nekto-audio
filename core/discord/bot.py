@@ -43,9 +43,8 @@ async def connect(channel: discord.TextChannel, author: discord.User) -> None:
 @bot.event
 async def on_message(message: discord.Message):
     if message.content == "$start":
-        room.set_reconnect(Reconnect(connect, message.channel, message.author))
+        if len(room.members) > 0:
+            return await message.reply("Already started!")
         await connect(message.channel, message.author)
     if message.content == "$stop":
-        await room.stop()
-    if message.content == "$next":
         await room.stop()

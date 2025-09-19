@@ -4,10 +4,6 @@ clients=female-client,male-client
 
 [discord]
 discord-token={your discord-token}
-; Default: False
-reconnect-after-dialog=True 
-; 5 seconds
-reconnect-delay=5 
 
 [client/female-client]
 user_id={your user_id}

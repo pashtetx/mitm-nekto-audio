@@ -7,12 +7,8 @@ def get_discord_config(path: Union[str, Path] = "config.ini") -> Optional[dict]:
     config = ConfigParser()
     config.read(path)
     token = config.get("discord", "discord-token", fallback=None)
-    reconnect = config.getboolean("discord", "reconnect-after-dialog", fallback=False)
-    reconnect_delay = config.getfloat("discord", "reconnect-delay", fallback=5.0)
     return {
         "token":token,
-        "reconnect":reconnect,
-        "reconnect_delay":reconnect_delay,
     }
 
 def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Client, None, None]:

@@ -48,9 +48,6 @@ class Room:
         self.sink = RedirectSink()
         self.redirect_to_discord = None
 
-    def set_reconnect(self, reconnect: Reconnect) -> None:
-        self.reconnect_callback = reconnect
-
     async def connect_voice(self) -> None:
         if not self.vc:
             return
@@ -83,14 +80,6 @@ class Room:
             if member.client == client:
                 continue
             member.redirect.add_track(track)
-
-    async def __reconnect(self) -> None:
-        if discord_config.get("reconnect") and self.reconnect_callback:
-            await asyncio.sleep(discord_config.get("reconnect_delay"))
-            await self.reconnect_callback.callback(
-                self.reconnect_callback.channel,
-                self.reconnect_callback.user
-            )
 
     async def disconnect_all_members(self) -> None:
         for member in self.members:
@@ -153,10 +142,8 @@ class Room:
         await redirect.stop()
         client.dispatcher.clear_default()
         client.dispatcher.clear_action()
-        self.members.remove(self.get_member_by_client(client))
         await self.disconnect_voice(redirect)
-        if len(self.members) == 1:
-            await self.__reconnect()
+        self.members.clear()
 
     async def stop(self) -> None:
         for member in self.members:
@@ -172,4 +159,3 @@ class Room:
             client.dispatcher.clear_default()
             client.dispatcher.clear_action()
         self.members.clear()
-        await self.__reconnect()
