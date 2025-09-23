@@ -147,6 +147,8 @@ class Room:
 
     async def stop(self) -> None:
         for member in self.members:
+            client.dispatcher.clear_default()
+            client.dispatcher.clear_action()
             client = member.client
             redirect = member.redirect
             pc = member.pc
@@ -156,6 +158,4 @@ class Room:
             await self.disconnect_voice(member.redirect)
             await client.peer_disconnect()                    
             await client.disconnect()
-            client.dispatcher.clear_default()
-            client.dispatcher.clear_action()
         self.members.clear()

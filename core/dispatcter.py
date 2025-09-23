@@ -3,8 +3,6 @@ from inspect import iscoroutinefunction
 
 from contextlib import suppress
 
-import asyncio
-
 class Dispatcher:
 
     def __init__(self, default: Dict[str, Any] = {}) -> None:
