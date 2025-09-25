@@ -132,10 +132,9 @@ class Room:
 
     async def __on_close(self,
         client: Client, 
-        payload: Dict[str, Any],
         redirect: MediaRedirect,
-        pc: RTCPeerConnection,
-        room: Self,
+        *args,
+        **kwargs,
     ) -> None:
         await self.disconnect_all_members()
         await client.disconnect()

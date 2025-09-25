@@ -16,7 +16,7 @@
 Чтобы установить бота, скачайте архив или выполните команду:
 
 ```
-git clone https://github.com/pashtetx/nekto.me-spion.git
+git clone https://github.com/pashtetx/mitm-nekto-audio.git
 ```
 
 После этого вам понадобятся **2 токена** с [nekto.me/audiochat](https://nekto.me/audiochat).

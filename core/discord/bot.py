@@ -47,4 +47,8 @@ async def on_message(message: discord.Message):
             return await message.reply("Already started!")
         await connect(message.channel, message.author)
     if message.content == "$stop":
-        await room.stop()
+        if len(room.members) > 0:
+            await room.stop()
+            await message.reply("Stop!")
+        else:
+            await message.reply("Not started!")

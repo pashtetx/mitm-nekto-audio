@@ -16,7 +16,7 @@ based **WebRTC** and **Socket.IO**
 Щоб встановити бота, завантажте архів або виконайте команду:
 
 ```
-git clone https://github.com/pashtetx/nekto.me-spion.git
+git clone https://github.com/pashtetx/mitm-nekto-audio.git
 ```
 
 Після цього вам потрібно отримати **2 токени** з [nekto.me/audiochat](https://nekto.me/audiochat).

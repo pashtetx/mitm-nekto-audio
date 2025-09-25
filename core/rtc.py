@@ -83,6 +83,7 @@ class MediaRedirect:
         self.redirect_to_discord = None
         self.task = None
         self.recorder = recorder
+        self.muted = False
 
     def set_redirect_from_discord(self, stream: RedirectFromDiscordStream) -> None:
         self.redirect_from_discord = stream
@@ -92,6 +93,12 @@ class MediaRedirect:
 
     def add_track(self, track: AudioRedirect) -> None:
         self.track = track
+
+    def mute(self) -> None:
+        self.muted = True
+
+    def unmute(self) -> None:
+        self.muted = False
 
     @property
     def audio(self) -> AudioRedirect:
@@ -104,17 +111,21 @@ class MediaRedirect:
     async def stop(self) -> None:
         self.started = False
         if self.task:
+            print("CANCEL")
             self.task.cancel()
 
     async def __run_track(self, track: AudioRedirect) -> None:
         while True:
+            if self.muted:
+                continue
             try:
                 frame = await track.recv()
                 discord_frame = None
                 if self.redirect_from_discord:
                     discord_frame = self.redirect_from_discord.recv()
                 await self.recorder.put(frame, self.__audio)
-            except Exception: 
+            except Exception as e:
+                # print(e)  
                 return
             if self.redirect_to_discord:
                 with suppress(OSError):
