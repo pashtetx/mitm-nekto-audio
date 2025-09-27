@@ -12,6 +12,7 @@ class Client(AsyncClient):
 
     def __init__(
         self, 
+        name: str,
         user_id: str,
         ua: str,
         locale: str = "en",
@@ -21,9 +22,12 @@ class Client(AsyncClient):
             "group": 0,
             "userSex": "ANY"
         },
+        wait_for: str = None,
         *args,
         **kwargs,
     ) -> None:
+        self.name = name
+        self.wait_for = wait_for
         self.user_id = user_id
         self.ua = ua
         self.locale = locale

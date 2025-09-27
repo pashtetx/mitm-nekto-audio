@@ -38,12 +38,19 @@ async def on_peer(
         if pc.connectionState == "closed":
             log.info("Connection state change to *closed*.")
             await pc.close()
-        if pc.connectionState == "connected":       
+        if pc.connectionState == "connected":      
             if all([member.pc for member in room.members]) \
                 and all([member.pc.connectionState == "connected" for member in room.members]):
+                await black_hole.stop()
+                text = (
+                    "● **Подключенно!**"
+                )
+                await room.send_to_discord(text)
                 for member in room.members:
                     await member.redirect.start()
                 await room.connect_voice()   
+            else:
+                await black_hole.start() 
             payload = {
                 "type":"peer-connection",
                 "connectionId":client.get_connection_id(),
@@ -55,7 +62,7 @@ async def on_peer(
     @pc.on("track")
     async def on_track(track) -> None:
         room.add_members_track(track, client)
-        black_hole.addTrack(track)
+        black_hole.addTrack(track)            
         log.info("User received a track.")
         payload = {
             "type":"stream-received",

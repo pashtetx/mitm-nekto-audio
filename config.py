@@ -3,17 +3,18 @@ from typing import Generator, Union, Optional
 from core.client import Client
 from pathlib import Path
 
-def get_discord_config(path: Union[str, Path] = "config.ini") -> Optional[dict]:
+from functools import partial
+
+def safe_get(config: ConfigParser, section: str, key: str) -> None:
+    return config.get(section, key, fallback=None)
+
+def get_config(path: Union[str, Path] = "config.ini") -> Optional[dict]:
     config = ConfigParser()
     config.read(path)
-    token = config.get("discord", "discord-token", fallback=None)
-    return {
-        "token":token,
-    }
+    return config
 
 def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Client, None, None]:
-    config = ConfigParser()
-    config.read(path)
+    config = get_config(path=path)
     names_of_clients = config.get("settings", "clients")
     for name in names_of_clients.replace(" ", "").split(","):
         option = f"client/{name}"
@@ -23,6 +24,7 @@ def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Cli
         search_sex = config.get(option, "search-sex", fallback=None)
         user_age = config.get(option, "age", fallback=None)
         search_age = config.get(option, "search-age", fallback=None)
+        wait_for = config.get(option, "wait-for", fallback=None)
         criteria = {
             "group":0,
         }
@@ -44,9 +46,14 @@ def parse_clients_config(path: Union[str, Path] = "config.ini") -> Generator[Cli
                 for age in search_age.split("-")
             ]
         yield Client(
+            name=name,
             user_id=user_id,
             ua=ua,
-            search_criteria=criteria
+            search_criteria=criteria,
+            wait_for=wait_for
         )
 
-discord_config = get_discord_config()
+_discord_config = get_config()
+load_discord = partial(_discord_config.get, "discord")
+bool_load_discord = partial(_discord_config.getboolean, "discord", fallback=False)
+load_safe_discord = partial(_discord_config.get, "discord", fallback=None)

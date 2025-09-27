@@ -13,11 +13,10 @@ from utils import parse_turn_params
 from core.discord.sink import RedirectSink, RedirectFromDiscordStream
 from core.rtc import MediaRedirect, RedirectDiscord
 
-from config import discord_config
-
 from contextlib import suppress
 
-import asyncio
+from config import load_discord
+
 import discord
 import json
 
@@ -38,15 +37,19 @@ class Reconnect:
 
 class Room:
 
-    def __init__(self) -> None:
+    def __init__(self, bot: discord.Bot) -> None:
         self.members: List[Member] = list()
-        self.reconnect_callback = None
+        self.bot = bot
         self.vc = None
 
     def set_voice_client(self, vc: discord.VoiceClient) -> None:
         self.vc = vc
         self.sink = RedirectSink()
         self.redirect_to_discord = None
+
+    async def send_to_discord(self, text: str) -> None:
+        channel = await self.bot.fetch_channel(load_discord("channel-id"))
+        await channel.send(text)
 
     async def connect_voice(self) -> None:
         if not self.vc:
@@ -117,7 +120,7 @@ class Room:
             await client.emit("event", data=payload)
             log.info("Sent ice canidates.") 
 
-    def __on_peer(self, client: Client, payload: Dict[str, Any], *args, **kwargs) -> None:
+    async def __on_peer(self, client: Client, payload: Dict[str, Any], *args, **kwargs) -> None:
         member = self.get_member_by_client(client)
         if not member:
             return
@@ -129,20 +132,30 @@ class Room:
             "redirect":member.redirect,
             "room":self,
         })
+        for member in self.members:
+            if member.client.wait_for == client.name:
+                if member.client.connected:
+                    await member.client.search()
+                else:
+                    member.client.wait_for = None  
 
     async def __on_close(self,
         client: Client, 
         redirect: MediaRedirect,
+        pc: RTCPeerConnection,
         *args,
         **kwargs,
     ) -> None:
         await self.disconnect_all_members()
         await client.disconnect()
         await redirect.stop()
+        if pc and pc.connectionState not in ("failed", "close"):
+            await pc.close()
         client.dispatcher.clear_default()
         client.dispatcher.clear_action()
         await self.disconnect_voice(redirect)
         self.members.clear()
+        await self.send_to_discord(text="● **Юзер закрыл подключение...**")
 
     async def stop(self) -> None:
         for member in self.members:
@@ -151,9 +164,9 @@ class Room:
             pc = member.pc
             client.dispatcher.clear_default()
             client.dispatcher.clear_action()
-            if pc and pc.connectionState == "connected":
-                await pc.close()
             await redirect.stop()
+            if pc and pc.connectionState not in ("failed", "close"):
+                await pc.close()
             await self.disconnect_voice(member.redirect)
             await client.peer_disconnect()                    
             await client.disconnect()

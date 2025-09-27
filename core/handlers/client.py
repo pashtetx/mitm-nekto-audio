@@ -40,7 +40,8 @@ async def on_auth(client: Client, payload: Dict[str, Any]) -> None:
     }
     await client.emit("event", data=payload)
     client.log.info("User sent web-agent payload.", payload=payload)
-    await client.search()
+    if not client.wait_for:
+        await client.search()
 
 async def on_peer(client: Client, payload: Dict[str, Any], *args, **kwargs) -> None:
     client.set_connection_id(payload.get("connectionId"))

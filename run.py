@@ -1,4 +1,4 @@
-from config import discord_config, parse_clients_config
+from config import parse_clients_config, load_discord
 from core.discord.bot import bot
 from core.rtc import MediaRedirect, MediaRecorder
 from core.room import Room, Member
@@ -31,7 +31,7 @@ def start() -> None:
     log.info("Created by r8du...")
     if not os.path.exists(Path("dialogs")):
         os.mkdir("dialogs")
-    token = discord_config.get("token")
+    token = load_discord("token")
     if token:
         log.info("Send $start in discord channel!")
         bot.run(token)
