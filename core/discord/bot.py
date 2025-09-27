@@ -30,36 +30,39 @@ async def on_ready() -> None:
     await bot.change_presence(activity=acitivity)
 
 async def connect(author: discord.User) -> None:
-    while True:
-        channel = await bot.fetch_channel(int(load_discord("channel-id")))
-        text = (
-            "● **Подключение к nekto.me...**\n"
-            f"_Чтобы остановить  - `{stop_command}`_"
-        )
-        await channel.send(text)
-        voice = author.voice
-        if not voice:
-            return await channel.send("Not in voice!")
-        voice = voice.channel
-        recorder = MediaRecorder()
-        room.set_voice_client(voice)
-        tasks = list()
-        for client in parse_clients_config():
-            register_client_handlers(client)
-            room.add_member(
-                Member(
-                    client=client,
-                    redirect=MediaRedirect(recorder=recorder)
-                )
+    try:
+        while True:
+            channel = await bot.fetch_channel(int(load_discord("channel-id")))
+            text = (
+                "● **Подключение к nekto.me...**\n"
+                f"_Чтобы остановить  - `{stop_command}`_"
             )
-            register_peer_handlers(client)
-            tasks.append(client.connect(wait=True))
-        await asyncio.gather(*tasks)
-        if not bool_load_discord("reconnect"):
-            break
-        delay = int(load_discord("reconnect-delay"))
-        await channel.send(f"● **Переподключаюсь через {delay} секунд...**")
-        await asyncio.sleep(delay)
+            await channel.send(text)
+            voice = author.voice
+            if not voice:
+                return await channel.send("Not in voice!")
+            voice = voice.channel
+            recorder = MediaRecorder()
+            room.set_voice_client(voice)
+            tasks = list()
+            for client in parse_clients_config():
+                register_client_handlers(client)
+                room.add_member(
+                    Member(
+                        client=client,
+                        redirect=MediaRedirect(recorder=recorder)
+                    )
+                )
+                register_peer_handlers(client)
+                tasks.append(client.connect(wait=True))
+            await asyncio.gather(*tasks)
+            if not bool_load_discord("reconnect"):
+                break
+            delay = int(load_discord("reconnect-delay"))
+            await channel.send(f"● **Переподключаюсь через {delay} секунд...**")
+            await asyncio.sleep(delay)
+    except asyncio.CancelledError:
+        raise
 
 @bot.event
 async def on_message(message: discord.Message):
